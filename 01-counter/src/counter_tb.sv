@@ -17,6 +17,7 @@
 * You also need to add a clock generation block to simulate the clock signal.
 */
 
+`timescale 1ns / 1ps
 module counter_tb();
     logic clk;
     logic rst_n;
@@ -29,12 +30,24 @@ module counter_tb();
 
     // Clock generation
     initial begin
-        // Fill in code here
+        clk = 0;
+        forever #5 clk = ~clk; // 10ns period (100MHz clock)
     end
 
-    // Instance of student's module
     updown_counter dut(
+        .clk(clk),
+        .rst_n(rst_n),
+        .load(load),
+        .up_down(up_down),
+        .enable(enable),
+        .d_in(d_in),
+        .count(count)
     );
+
+    initial begin
+        $dumpfile("dump.vcd");
+        $dumpvars(0, counter_tb); 
+    end
 
     initial begin
         test_passed = 1'b1;
@@ -54,7 +67,7 @@ module counter_tb();
         #10;
         load = 0;
         if (count !== 4'h7) begin
-            $display("Test 1 Failed: Load operation");
+            $display("Test 1 Failed: Load operation, expected 7, got %h", count);
             test_passed = 1'b0;
         end
 
@@ -63,7 +76,7 @@ module counter_tb();
         up_down = 1;
         #40;  // 4 clock cycles
         if (count !== 4'hB) begin
-            $display("Test 2 Failed: Count up operation");
+            $display("Test 2 Failed: Count up operation, expected B, got %h", count);
             test_passed = 1'b0;
         end
 
@@ -71,7 +84,7 @@ module counter_tb();
         up_down = 0;
         #30;  // 3 clock cycles
         if (count !== 4'h8) begin
-            $display("Test 3 Failed: Count down operation");
+            $display("Test 3 Failed: Count down operation, expected 8, got %h", count);
             test_passed = 1'b0;
         end
 
@@ -79,15 +92,45 @@ module counter_tb();
         enable = 0;
         #20;
         if (count !== 4'h8) begin
-            $display("Test 4 Failed: Disabled counter changed");
+            $display("Test 4 Failed: Disabled counter changed, expected 8, got %h", count);
             test_passed = 1'b0;
         end
 
         // Test Case 5: Reset during operation
+        enable = 1;
+        up_down = 1;
+        #20; 
+        rst_n = 0;
+        #10;
+        rst_n = 1;
+        if (count !== 4'h0) begin
+            $display("Test 5 Failed: Reset during operation, expected 0, got %h", count);
+            test_passed = 1'b0;
+        end
 
         // Test Case 6: Load while counting
+        enable = 1;
+        up_down = 1;
+        #20;
+        d_in = 4'hC;
+        load = 1;
+        #10;
+        load = 0;
+        if (count !== 4'hC) begin
+            $display("Test 6 Failed: Load while counting, expected C, got %h", count);
+            test_passed = 1'b0;
+        end
 
         // Test Case 7: Disable while counting
+        enable = 1;
+        up_down = 1;
+        #20;
+        enable = 0;
+        #20; 
+        if (count !== 4'hE) begin
+            $display("Test 7 Failed: Disable while counting, expected E, got %h", count);
+            test_passed = 1'b0;
+        end
 
         // Final check
         if (test_passed) begin
